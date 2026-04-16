@@ -1,5 +1,5 @@
 <html>
 <body>
-<h2>Hello World!</h2>
+<h2>Welcome to Jenkins tomcat deployment</h2>
 </body>
 </html>
