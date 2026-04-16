@@ -8,26 +8,24 @@ pipeline {
         JFROG_CREDS = credentials('jfrog-creds')
 
         MAVEN_REPO = 'Maven-repo'
-        IMAGE_NAME = 'trialwcx5g6.jfrog.io/docker-repo/demoapp'
-
         APP_NAME = 'demoapp'
-        PORT = '8081'
+
+        TOMCAT_PATH = '/opt/tomcat/webapps'
     }
 
     stages {
-
         stage('Clone') {
             steps {
                 git branch: 'main', url: "${GIT_REPO}"
             }
         }
-
         stage('Build') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
+        
         stage('Upload WAR') {
             steps {
                 sh """
@@ -37,29 +35,30 @@ pipeline {
                 """
             }
         }
-
-        stage('Docker Build') {
+        stage('Deploy to Tomcat') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                sh """
+                echo "Cleaning old deployment..."
+                rm -rf ${TOMCAT_PATH}/${APP_NAME}*
+
+                echo "Copying new WAR..."
+                cp target/${APP_NAME}.war ${TOMCAT_PATH}/
+
+                echo "Restarting Tomcat..."
+                /opt/tomcat/bin/shutdown.sh || true
+                sleep 5
+                /opt/tomcat/bin/startup.sh
+                """
             }
         }
+    }
 
-        stage('Docker Push') {
-            steps {
-                sh '''
-                docker login -u $JFROG_CREDS_USR -p $JFROG_CREDS_PSW trialwcx5g6.jfrog.io
-                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                '''
-            }
+    post {
+        success {
+            echo "Deployment Successful"
         }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                docker rm -f demoapp || true
-                docker run -d -p 8081:8080 --name demoapp ${IMAGE_NAME}:${BUILD_NUMBER}
-                '''
-            }
+        failure {
+            echo "Pipeline Failed"
         }
     }
 }
