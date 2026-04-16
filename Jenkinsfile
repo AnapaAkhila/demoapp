@@ -21,7 +21,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn clean package'
             }
         }
 
@@ -35,30 +35,14 @@ pipeline {
                 """
             }
         }
-        stage('Deploy to Tomcat') {
-            steps {
-                sh """
-                echo "Cleaning old deployment..."
-                rm -rf ${TOMCAT_PATH}/${APP_NAME}*
-
-                echo "Copying new WAR..."
-                cp target/${APP_NAME}.war ${TOMCAT_PATH}/
-
-                echo "Restarting Tomcat..."
-                /opt/tomcat/bin/shutdown.sh || true
-                sleep 5
-                /opt/tomcat/bin/startup.sh
+	stage('Deploy to Tomcat') {
+    	   steps {
+               sh """
+               rm -rf ${TOMCAT_PATH}/${APP_NAME}*
+               cp target/${APP_NAME}.war ${TOMCAT_PATH}/
                 """
-            }
-        }
+              }
+         }
     }
-
-    post {
-        success {
-            echo "Deployment Successful"
-        }
-        failure {
-            echo "Pipeline Failed"
-        }
-    }
+    
 }
